@@ -1,0 +1,136 @@
+'use client';
+import { useCallback, useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
+
+const PlazaScene = dynamic(() => import('./PlazaScene'), { ssr: false });
+
+const PHASE_SECONDS = 10;
+// Where "Discuss a project" leads. Add the studio's address after "mailto:" (or replace with a contact page URL).
+const CONTACT_HREF = 'mailto:?subject=Project%20enquiry%20for%20GILab';
+const phases = [
+  { name: 'Art', title: 'It begins with imagination.', line: 'Sculptures, installations and landmarks that give spaces identity.' },
+  { name: 'Light', title: 'Light brings it to life.', line: 'Architectural and immersive lighting that transforms how spaces look and feel.' },
+  { name: 'Technology', title: 'Technology invites participation.', line: 'Interactive installations, mixed reality and digital storytelling that connect people with spaces.' }
+];
+
+export default function Experience() {
+  const [phase, setPhase] = useState(0);
+  const [playing, setPlaying] = useState(true);
+  const [sceneState, setSceneState] = useState<'loading' | 'ready' | 'failed'>('loading');
+
+  useEffect(() => {
+    // Shareable links such as /?phase=light open on a chosen act.
+    const requested = new URLSearchParams(location.search).get('phase')?.toLowerCase();
+    const index = phases.findIndex(p => p.name.toLowerCase() === requested);
+    if (index >= 0) setPhase(index);
+    const query = matchMedia('(prefers-reduced-motion: reduce)');
+    if (query.matches) setPlaying(false);
+    const change = () => { if (query.matches) setPlaying(false); };
+    query.addEventListener('change', change);
+    return () => query.removeEventListener('change', change);
+  }, []);
+
+  // Auto-advance through Art → Light → Technology while playing.
+  useEffect(() => {
+    if (!playing || sceneState === 'loading') return;
+    const id = setTimeout(() => setPhase(p => (p + 1) % phases.length), PHASE_SECONDS * 1000);
+    return () => clearTimeout(id);
+  }, [phase, playing, sceneState]);
+
+  // Fall back to the static mark if the scene is slow to start.
+  useEffect(() => {
+    const id = setTimeout(() => setSceneState(s => (s === 'loading' ? 'failed' : s)), 12000);
+    return () => clearTimeout(id);
+  }, []);
+
+  // Liquid glass: Chromium can refract the scene behind glass with an SVG filter; others keep frosted glass.
+  // A soft specular highlight on every glass surface follows the pointer.
+  useEffect(() => {
+    const brands = (navigator as Navigator & { userAgentData?: { brands: { brand: string }[] } }).userAgentData?.brands ?? [];
+    if (brands.some(b => /Chromium/.test(b.brand))) document.documentElement.classList.add('liquid');
+    let frame = 0, x = 0, y = 0;
+    const paint = () => {
+      frame = 0;
+      document.querySelectorAll<HTMLElement>('.glass').forEach(el => {
+        const r = el.getBoundingClientRect();
+        el.style.setProperty('--mx', `${x - r.left}px`); el.style.setProperty('--my', `${y - r.top}px`);
+      });
+    };
+    const move = (e: PointerEvent) => { x = e.clientX; y = e.clientY; if (!frame) frame = requestAnimationFrame(paint); };
+    window.addEventListener('pointermove', move, { passive: true });
+    return () => { window.removeEventListener('pointermove', move); cancelAnimationFrame(frame); };
+  }, []);
+
+  const onReady = useCallback(() => setSceneState('ready'), []);
+  const onFail = useCallback(() => setSceneState('failed'), []);
+  const choose = (index: number) => { setPhase(index); setPlaying(false); };
+
+  return (
+    <div className={`site phase-${phase} scene-${sceneState} ${playing ? 'is-playing' : 'is-paused'}`} style={{ '--phase-duration': `${PHASE_SECONDS}s`, '--p': phase } as React.CSSProperties}>
+      <svg className="glass-defs" width="0" height="0" aria-hidden="true">
+        <filter id="liquid-glass" x="0%" y="0%" width="100%" height="100%" colorInterpolationFilters="sRGB">
+          <feTurbulence type="fractalNoise" baseFrequency="0.006 0.009" numOctaves={2} seed={11} result="noise" />
+          <feGaussianBlur in="noise" stdDeviation="3" result="map" />
+          <feDisplacementMap in="SourceGraphic" in2="map" scale="46" xChannelSelector="R" yChannelSelector="G" result="bent" />
+          <feGaussianBlur in="bent" stdDeviation="6" />
+        </filter>
+      </svg>
+      <div className="stage" aria-hidden="true">
+        {sceneState !== 'failed' && <PlazaScene phase={phase} playing={playing} onReady={onReady} onFail={onFail} />}
+        <div className="fallback"><img src="/logo-mark.png" alt="" /></div>
+        <div className="shade" />
+      </div>
+
+      <header className="top">
+        <img className="brand" src="/logo-white.png" alt="GILab" width={640} height={542} />
+      </header>
+
+      <main className="hero">
+        <h1>
+          {phases.map((p, i) => (
+            <span key={p.name}>
+              <span className={`word ${i === phase ? 'is-active' : ''}`} data-text={`${p.name}.`} style={{ '--i': i } as React.CSSProperties}>{p.name}.</span>
+              {i === 1 ? <br /> : ' '}
+            </span>
+          ))}
+        </h1>
+        <p className="lead">A new immersive experience is taking shape.</p>
+
+        <p className="soon">Our new website is coming soon.</p>
+
+        <section className="panel glass">
+        <div className="detail">
+          {phases.map((p, i) => (
+            <div key={p.name} className={`detail-item ${i === phase ? 'is-active' : ''}`} aria-hidden={i !== phase}>
+              <p className="detail-title">{p.title}</p>
+              <p className="detail-line">{p.line}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="cta">
+          <p className="cta-note">Our studio is open for projects and collaborations.</p>
+          <a className="primary" href={CONTACT_HREF}>Discuss a project <span aria-hidden="true">↗</span></a>
+        </div>
+        </section>
+
+        <div className="controls">
+          <div className="phases glass" role="group" aria-label="Choose what the plaza shows">
+            <span className="phase-blob" aria-hidden="true"><span className="phase-fill" key={`${phase}-${playing}`} /></span>
+            {phases.map((p, i) => (
+              <button key={p.name} className={i === phase ? 'is-active' : ''} aria-pressed={i === phase} onClick={() => choose(i)}>{p.name}</button>
+            ))}
+          </div>
+          <button className="play glass" onClick={() => setPlaying(v => !v)} aria-pressed={!playing}>
+            <span className="play-icon" aria-hidden="true" />
+            <span className="play-label">{playing ? 'Pause experience' : 'Play experience'}</span>
+          </button>
+        </div>
+      </main>
+
+      <footer className="bottom">
+        <p className="motto">Transforming Spaces. Inspiring People.</p>
+      </footer>
+    </div>
+  );
+}
