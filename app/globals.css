@@ -191,6 +191,21 @@ h1 { filter: drop-shadow(0 12px 30px rgba(0, 0, 0, .45)); }
 .is-paused .play-icon::after { opacity: 0; }
 .is-paused .play-icon::before { left: 18px; top: 15px; width: 0; height: 0; background: none; border-left: 12px solid currentColor; border-top: 8px solid transparent; border-bottom: 8px solid transparent; border-radius: 0; }
 
+/* Small hint that the sculpture can be turned. */
+.rotate-hint {
+  position: fixed; z-index: 2; right: var(--gutter); bottom: clamp(18px, 3vh, 30px); pointer-events: none;
+  display: inline-flex; align-items: center; gap: 8px; padding: 7px 14px 7px 10px; border-radius: 999px;
+  font-size: 13px; font-weight: 600; letter-spacing: .02em; color: var(--muted);
+  animation: fade 1.4s 2.2s var(--ease-soft) both;
+}
+.rotate-icon { position: relative; width: 22px; height: 14px; }
+.rotate-icon::before { content: ""; position: absolute; inset: 1px 0; border: 1.5px solid currentColor; border-radius: 50%; border-left-color: transparent; }
+.rotate-icon::after { content: ""; position: absolute; top: 3px; left: 9px; width: 4px; height: 4px; border-radius: 50%; background: currentColor; animation: orbit 2.8s ease-in-out infinite; }
+@keyframes orbit { 0%, 100% { transform: translateX(-6px); } 50% { transform: translateX(6px); } }
+.scene-failed .rotate-hint { display: none; }
+.rotate-touch { display: none; }
+@media (hover: none) { .rotate-desktop { display: none; } .rotate-touch { display: inline; } }
+
 /* ---------- Footer ---------- */
 .bottom { font-size: 15px; color: var(--muted); }
 
@@ -245,7 +260,7 @@ h1 { filter: drop-shadow(0 12px 30px rgba(0, 0, 0, .45)); }
     background:
       linear-gradient(180deg, rgba(5, 7, 12, .5) 0%, transparent 14%, transparent 34%, rgba(5, 7, 12, .6) 52%, rgba(5, 7, 12, .82) 72%);
   }
-  .hero { align-self: end; padding-top: 37svh; padding-bottom: 16px; }
+  .hero { align-self: end; padding-top: calc(37svh + 44px); padding-bottom: 16px; }
   .soon { margin-top: 18px; }
   h1 { font-size: clamp(2.9rem, 13.5vw, 4.2rem); }
   .controls { margin-top: 18px; gap: 12px; }
@@ -254,6 +269,13 @@ h1 { filter: drop-shadow(0 12px 30px rgba(0, 0, 0, .45)); }
   .play { align-self: flex-start; }
   .primary { padding: 14px 24px; font-size: 17px; }
   .bottom { font-size: 14px; }
+  /* The hero's top padding sits over the model: let touches through to the 3D scene there. */
+  .hero, .top { pointer-events: none; }
+  .hero > *, .brand { pointer-events: auto; }
+  .rotate-hint {
+    position: absolute; top: calc(37svh + 94px); bottom: auto; left: 50%; right: auto; transform: translateX(-50%);
+    color: var(--ink); font-size: 13px; background: rgba(18, 22, 34, .55);
+  }
   .scene-failed .fallback { inset: 0 0 50% 0; }
   .scene-failed .fallback img { width: 64vw; }
 }

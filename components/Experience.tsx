@@ -128,6 +128,8 @@ export default function Experience() {
         </div>
       </main>
 
+      <p className="rotate-hint glass" aria-hidden="true"><span className="rotate-icon" /><span className="rotate-desktop">Drag to rotate</span><span className="rotate-touch">Swipe to rotate</span></p>
+
       <footer className="bottom">
         <p className="motto">Transforming Spaces. Inspiring People.</p>
       </footer>
